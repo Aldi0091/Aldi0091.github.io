@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType } from 'lightweight-charts';
+import { generateCandlestickData } from './utils/dataGenerator';
 
 export const ChartComponent = (props) => {
     const chartContainerRef = useRef(null);
     const chartRef = useRef(null);
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
-    const selectedToolRef = useRef(null); // Store the selected trendline
+    const selectedToolRef = useRef(null); // Store the selected HorizontalLine
 
     useEffect(() => {
         if (!chartContainerRef.current) return;
@@ -26,17 +27,15 @@ export const ChartComponent = (props) => {
         const candleSeries = chart.addCandlestickSeries();
         candleSeries.setData(props.data);
 
-        // 3) Detect when a trendline is selected (double-click or after edit)
+        // 3) Detect when a HorizontalLine is selected (double-click or after edit)
         chart.subscribeLineToolsDoubleClick((event) => {
             if (event.selectedLineTool) {
-                console.log("Trendline selected (double-click):", event.selectedLineTool);
                 selectedToolRef.current = event.selectedLineTool;
             }
         });
 
         chart.subscribeLineToolsAfterEdit((event) => {
             if (event.selectedLineTool) {
-                console.log("Trendline selected (after edit):", event.selectedLineTool);
                 selectedToolRef.current = event.selectedLineTool;
             }
         });
@@ -60,9 +59,9 @@ export const ChartComponent = (props) => {
     }, [props.data]);
 
     // Function to activate trend line drawing mode
-    const handleDrawTrendLine = () => {
+    const handleDrawHorizontalLine = () => {
         if (!chartRef.current) return;
-        chartRef.current.setActiveLineTool('TrendLine', {
+        chartRef.current.setActiveLineTool('HorizontalLine', {
             color: 'red',
             lineWidth: 2,
         });
@@ -71,19 +70,16 @@ export const ChartComponent = (props) => {
     const handleClearLines = () => {
         if (!chartRef.current) return;
         chartRef.current.removeAllLineTools();
-        console.log("All trendlines removed.");
     };
 
-    // Function to handle right-click (context menu) on a selected trendline
+    // Function to handle right-click (context menu) on a selected HorizontalLine
     const handleContextMenu = (event) => {
         event.preventDefault();
         
         if (!selectedToolRef.current) {
-            console.log("No trendline selected for right-click.");
             return;
         }
 
-        console.log("Right-clicked on trendline:", selectedToolRef.current);
         setContextMenu({
             visible: true,
             x: event.clientX,
@@ -105,9 +101,9 @@ export const ChartComponent = (props) => {
                 </p>
                 <button 
                     className="mb-4 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg shadow-md hover:bg-blue-700 transition"
-                    onClick={handleDrawTrendLine}
+                    onClick={handleDrawHorizontalLine}
                 >
-                    Draw Trend Line
+                    Draw Horizontal Line
                 </button>
                 <button 
                     className="mx-2 px-4 py-2 bg-red-600 text-white font-medium rounded-lg shadow-md hover:bg-red-700 transition"
@@ -151,32 +147,6 @@ export const ChartComponent = (props) => {
         </div>
     );
 };
-
-// Function to generate sample candlestick data
-function generateCandlestickData(startDate, days) {
-    const data = [];
-    let currentDate = new Date(startDate);
-    let open = 100;
-
-    for (let i = 0; i < days; i++) {
-        const high = open + Math.random() * 10;
-        const low = open - Math.random() * 10;
-        const close = low + Math.random() * (high - low);
-
-        data.push({
-            time: currentDate.toISOString().split('T')[0],
-            open: parseFloat(open.toFixed(2)),
-            high: parseFloat(high.toFixed(2)),
-            low: parseFloat(low.toFixed(2)),
-            close: parseFloat(close.toFixed(2)),
-        });
-
-        open = close + (Math.random() - 0.5) * 5;
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return data;
-}
 
 // Initialize sample data
 const initialData = generateCandlestickData('2024-01-01', 365);
