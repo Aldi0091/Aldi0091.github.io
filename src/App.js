@@ -1,8 +1,7 @@
-
-import { AreaSeries, createChart, ColorType } from 'lightweight-charts';
+import { CandlestickSeries, createChart, ColorType } from 'lightweight-charts';
 import React, { useEffect, useRef } from 'react';
 
-export const ChartComponent = props => {
+export const ChartComponent = (props) => {
     const {
         data,
         colors: {
@@ -16,58 +15,88 @@ export const ChartComponent = props => {
 
     const chartContainerRef = useRef();
 
-    useEffect(
-        () => {
-            const handleResize = () => {
-                chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-            };
+    useEffect(() => {
+        const handleResize = () => {
+            chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        };
 
-            const chart = createChart(chartContainerRef.current, {
-                layout: {
-                    background: { type: ColorType.Solid, color: backgroundColor },
-                    textColor,
-                },
-                width: chartContainerRef.current.clientWidth,
-                height: 300,
-            });
-            chart.timeScale().fitContent();
+        const chart = createChart(chartContainerRef.current, {
+            layout: {
+                background: { type: ColorType.Solid, color: backgroundColor },
+                textColor,
+            },
+            width: chartContainerRef.current.clientWidth,
+            height: 700,
+        });
 
-            const newSeries = chart.addSeries(AreaSeries, { lineColor, topColor: areaTopColor, bottomColor: areaBottomColor });
-            newSeries.setData(data);
+        chart.timeScale().applyOptions({
+            locale: 'en-US',
+            timeVisible: true,
+            secondsVisible: false,
+        });
+        chart.timeScale().fitContent();
 
-            window.addEventListener('resize', handleResize);
+        const newSeries = chart.addSeries(CandlestickSeries, {
+            upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
+            wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+        });
 
-            return () => {
-                window.removeEventListener('resize', handleResize);
+        newSeries.setData(data);
+        
+        const candlestickSeries = chart.addSeries(CandlestickSeries, {
+          upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
+          wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+      });
 
-                chart.remove();
-            };
-        },
-        [data, backgroundColor, lineColor, textColor, areaTopColor, areaBottomColor]
-    );
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            chart.remove();
+        };
+    }, [data, backgroundColor, lineColor, textColor, areaTopColor, areaBottomColor]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-900"
-            ref={chartContainerRef}
-        />
+        <div className="w-full mx-9 bg-gray-800 rounded-lg shadow-lg">
+            <div className="text-white text-lg font-semibold text-center mb-4">PoC Charts Build In Progress</div>
+            <div className="mb-4" ref={chartContainerRef} />
+        </div>
     );
 };
 
-const initialData = [
-    { time: '2018-12-22', value: 32.51 },
-    { time: '2018-12-23', value: 31.11 },
-    { time: '2018-12-24', value: 27.02 },
-    { time: '2018-12-25', value: 27.32 },
-    { time: '2018-12-26', value: 25.17 },
-    { time: '2018-12-27', value: 28.89 },
-    { time: '2018-12-28', value: 25.46 },
-    { time: '2018-12-29', value: 23.92 },
-    { time: '2018-12-30', value: 22.68 },
-    { time: '2018-12-31', value: 22.67 },
-];
+function generateCandlestickData(startDate, days) {
+  const data = [];
+  let currentDate = new Date(startDate);
+  let open = 100;
+
+  for (let i = 0; i < days; i++) {
+      const high = open + Math.random() * 10;
+      const low = open - Math.random() * 10;
+      const close = low + Math.random() * (high - low);
+
+      data.push({
+          time: currentDate.toISOString().split('T')[0],
+          open: parseFloat(open.toFixed(2)),
+          high: parseFloat(high.toFixed(2)),
+          low: parseFloat(low.toFixed(2)),
+          close: parseFloat(close.toFixed(2))
+      });
+
+      open = close + (Math.random() - 0.5) * 5;
+
+      currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return data;
+}
+
+const initialData = generateCandlestickData('2024-06-01', 185);
+console.log(initialData);
 
 export default function App(props) {
     return (
-        <ChartComponent {...props} data={initialData}></ChartComponent>
+        <div className="min-h-screen flex items-center justify-center bg-gray-800">
+            <ChartComponent {...props} data={initialData} />
+        </div>
     );
 }
