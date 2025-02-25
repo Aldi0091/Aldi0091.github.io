@@ -1,17 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType } from 'lightweight-charts';
 import { generateCandlestickData } from './utils/dataGenerator';
+import { CheckIcon } from '@radix-ui/react-icons';
+import { notifications } from '@mantine/notifications';
+import { Notifications } from '@mantine/notifications';
+import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
+
 
 export const ChartComponent = (props) => {
     const chartContainerRef = useRef(null);
     const chartRef = useRef(null);
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
-    const selectedToolRef = useRef(null); // Store the selected HorizontalLine
+    const selectedToolRef = useRef(null);
 
     useEffect(() => {
         if (!chartContainerRef.current) return;
 
-        // 1) Create the chart
         const chart = createChart(chartContainerRef.current, {
             layout: {
                 background: { type: ColorType.Solid, color: 'white' },
@@ -23,11 +28,9 @@ export const ChartComponent = (props) => {
 
         chartRef.current = chart;
 
-        // 2) Add candlestick series
         const candleSeries = chart.addCandlestickSeries();
         candleSeries.setData(props.data);
 
-        // 3) Detect when a HorizontalLine is selected (double-click or after edit)
         chart.subscribeLineToolsDoubleClick((event) => {
             if (event.selectedLineTool) {
                 selectedToolRef.current = event.selectedLineTool;
@@ -40,15 +43,12 @@ export const ChartComponent = (props) => {
             }
         });
 
-        // 4) Attach right-click event listener to the chart container
         const handleContextMenuEvent = (event) => handleContextMenu(event);
         chartContainerRef.current.addEventListener('contextmenu', handleContextMenuEvent);
 
-        // 5) Attach global click event listener to close the menu
         const handleClickOutside = () => closeContextMenu();
         document.addEventListener('click', handleClickOutside);
 
-        // 6) Cleanup on unmount
         return () => {
             chart.remove();
             if (chartContainerRef.current) {
@@ -58,7 +58,6 @@ export const ChartComponent = (props) => {
         };
     }, [props.data]);
 
-    // Function to activate trend line drawing mode
     const handleDrawHorizontalLine = () => {
         if (!chartRef.current) return;
         chartRef.current.setActiveLineTool('HorizontalLine', {
@@ -70,26 +69,46 @@ export const ChartComponent = (props) => {
     const handleClearLines = () => {
         if (!chartRef.current) return;
         chartRef.current.removeAllLineTools();
+        selectedToolRef.current = null;
     };
 
-    // Function to handle right-click (context menu) on a selected HorizontalLine
     const handleContextMenu = (event) => {
         event.preventDefault();
-        
-        if (!selectedToolRef.current) {
+        if (!chartRef.current || !selectedToolRef.current) {
             return;
         }
-
+    
         setContextMenu({
             visible: true,
             x: event.clientX,
             y: event.clientY,
-        });
+        });  
     };
 
-    // Function to close the context menu
     const closeContextMenu = () => {
         setContextMenu({ visible: false, x: 0, y: 0 });
+    };
+
+    const handleSetContextButtonClick = (event, kind) => {
+        event.preventDefault();
+        if (!selectedToolRef.current || !chartRef.current) return;
+        const lineToolData = JSON.parse(chartRef.current.getSelectedLineTools())[0];
+        if (!lineToolData) {
+            console.error("No selected line tool found.");
+            return;
+        }
+        const price = lineToolData.points[0].price;
+        lineToolData.options.line.color = kind;
+        notifications.show({
+            title: 'Line Updated',
+            message: `Line set at price: ${price.toFixed(2)}`,
+            color: 'green',
+            icon: <CheckIcon size={16} />,
+            autoClose: 5000,
+          });
+        chartRef.current.applyLineToolOptions(lineToolData);
+
+        closeContextMenu();
     };
 
     return (
@@ -131,13 +150,13 @@ export const ChartComponent = (props) => {
                     }}
                 >
                     <button 
-                        onClick={closeContextMenu} 
+                        onClick={(event, kind) => handleSetContextButtonClick(event, kind='#008000')}
                         className="block px-4 py-2 text-gray-800 hover:bg-gray-200 w-full text-left"
                     >
                         Set BOS
                     </button>
                     <button 
-                        onClick={closeContextMenu} 
+                        onClick={(event, kind) => handleSetContextButtonClick(event, kind='#FF0000')}
                         className="block px-4 py-2 text-gray-800 hover:bg-gray-200 w-full text-left"
                     >
                         Set Target Price
@@ -148,14 +167,13 @@ export const ChartComponent = (props) => {
     );
 };
 
-// Initialize sample data
 const initialData = generateCandlestickData('2024-01-01', 365);
 
-// Main application component
 export default function App(props) {
     return (
-        <div className="width-auto min-h-screen flex items-center justify-center bg-gray-800">
-            <ChartComponent data={initialData} />
-        </div>
+            <div className="width-auto min-h-screen flex items-center justify-center bg-gray-800">
+                <ChartComponent data={initialData} />
+                <Notifications position="top-right" />
+            </div>
     );
 }
