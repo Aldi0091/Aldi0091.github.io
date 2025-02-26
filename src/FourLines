@@ -1,0 +1,148 @@
+import React, { useEffect, useRef } from 'react';
+import { createChart, ColorType } from 'lightweight-charts';
+
+export const ChartComponent = (props) => {
+  const chartContainerRef = useRef(null);
+  const chartRef = useRef(null);
+  
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+    
+    const chart = createChart(chartContainerRef.current, {
+        layout: {
+            background: { type: ColorType.Solid, color: 'black' },
+            textColor: 'white',
+        },
+        grid: {
+            vertLines: { color: 'rgba(255, 255, 255, 0.1)' },
+            horzLines: { color: 'rgba(255, 255, 255, 0.1)' },
+        },
+      width: chartContainerRef.current.clientWidth,
+      height: 700,
+    });
+    chart.applyOptions({
+      timeScale: {
+        rightOffset: 0,
+        barSpacing: 10,
+        fixLeftEdge: true,
+        fixRightEdge: true,
+        timeVisible: true,
+        secondsVisible: false,
+        tickMarkFormatter: (timestamp) => {
+          const date = new Date(timestamp * 1000);
+          const hours = date.getHours().toString().padStart(2, '0');
+          const minutes = date.getMinutes().toString().padStart(2, '0');
+          return `${hours}:${minutes}`;
+        }
+      }
+    });
+    chart.timeScale().fitContent();
+    chartRef.current = chart;
+    
+    const candleSeries = chart.addCandlestickSeries();
+    candleSeries.setData(props.data);
+
+    const topPrice = 125;
+    const bottomPrice = 80;
+    const ratio = 0.2;
+    const subDelta = 15;
+
+    const topLine = chart.addLineTool(
+      "HorizontalLine",
+      [{ price: topPrice }],
+      {
+        "line": {
+          "color": "#2962FF",
+          "width": 1,
+          "style": 0,
+        },
+      }
+    );
+    
+    const bottomLine = chart.addLineTool(
+      "HorizontalLine",
+      [{ price: bottomPrice }],
+      {
+        "line": {
+          "color": "#2962FF",
+          "width": 1,
+          "style": 0,
+        },
+      }
+    );
+    
+    let middleLine = chart.addLineTool(
+      "HorizontalLine",
+      [{ price: bottomPrice + ratio * (topPrice - bottomPrice) }],
+      {
+        "line": {
+          "color": "#FF0000",
+          "width": 1,
+          "style": 0,
+        },
+      }
+    );
+    
+    let subBottomLine = chart.addLineTool(
+      "HorizontalLine",
+      [{ price: bottomPrice - subDelta }],
+      {
+        "line": {
+          "color": "#00FF00",
+          "width": 1,
+          "style": 0,
+        },
+      }
+    );
+    
+    chart.subscribeLineToolsAfterEdit((params) => {
+      if (params.selectedLineTool.id === topLine.Og.ji) {
+        const newTopPrice = topLine.Og.Ls[0].price;
+        const fixedBottomPrice = bottomLine.Og.Ls[0].price;
+        const newMiddlePrice = fixedBottomPrice + ratio * (newTopPrice - fixedBottomPrice);
+        
+        chart.removeLineToolsById([middleLine.Og.ji]);
+        middleLine = chart.addLineTool(
+          "HorizontalLine",
+          [{ price: newMiddlePrice }],
+          {
+            "line": {
+              "color": "#FF0000",
+              "width": 1,
+              "style": 0,
+            },
+          }
+        );
+      }
+      else if (params.selectedLineTool.id === bottomLine.Og.ji) {
+        const newBottomPrice = bottomLine.Og.Ls[0].price;
+        const newSubBottomPrice = newBottomPrice - subDelta;
+        
+        chart.removeLineToolsById([subBottomLine.Og.ji]);
+        subBottomLine = chart.addLineTool(
+          "HorizontalLine",
+          [{ price: newSubBottomPrice }],
+          {
+            "line": {
+              "color": "#00FF00",
+              "width": 1,
+              "style": 0,
+            },
+          }
+        );
+      }
+    });
+    
+    return () => {
+      chart.remove();
+    };
+  }, [props.data]);
+  
+  return (
+    <div className="w-full" style={{ width: '100%', height: 700 }}>
+      <div ref={chartContainerRef} style={{ width: '100%', height: '100%' }} />
+    </div>
+  );
+};
+
+export default ChartComponent;

@@ -1,0 +1,57 @@
+import React, { useEffect, useRef } from 'react';
+import { createChart, ColorType } from 'lightweight-charts';
+import { generateCandlestickData } from './utils/dataGenerator';
+
+export const ChartComponent = (props) => {
+  const chartContainerRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+    
+    // Создаем график
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: 'white' },
+        textColor: 'black',
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: 700,
+    });
+    chartRef.current = chart;
+
+    const candleSeries = chart.addCandlestickSeries();
+    candleSeries.setData(props.data);
+
+    // Рисуем одну горизонтальную линию на уровне цены 50
+    chart.addLineTool(
+      "HorizontalLine",           // тип линии
+      [{ price: 100 }],            // координаты (для горизонтальной линии достаточно одного значения цены)
+      {
+        lineColor: '#FF0000',     // цвет линии
+        lineWidth: 2,             // толщина линии
+      }
+    );
+
+    return () => {
+      chart.remove();
+    };
+  }, []);
+
+  return (
+    <div className="w-full" style={{ width: '100%', height: 700 }}>
+      <div ref={chartContainerRef} style={{ width: '100%', height: '100%' }} />
+    </div>
+  );
+};
+
+
+const initialData = generateCandlestickData('2024-01-01', 365);
+
+export default function App(props) {
+  return (
+    <div className="width-auto min-h-screen flex items-center justify-center bg-gray-800">
+      <ChartComponent data={initialData} />
+    </div>
+  );
+}
