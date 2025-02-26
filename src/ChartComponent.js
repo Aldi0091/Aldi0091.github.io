@@ -180,6 +180,12 @@ export const ChartComponent = (props) => {
     chartRef.current.subscribeClick(clickHandler);
   };
 
+  const handleClearLines = () => {
+      if (!chartRef.current) return;
+      chartRef.current.removeAllLineTools();
+  };
+
+
   return (
     <div className="w-full bg-gray-800 rounded-lg shadow-lg relative">
       <div className="mx-4 bg-gray-800 rounded-lg shadow-lg relative">
@@ -192,6 +198,12 @@ export const ChartComponent = (props) => {
           onClick={handleDrawLine}
         >
           Draw Lines
+        </button>
+        <button 
+            className="mx-2 px-4 py-2 bg-red-600 text-white font-medium rounded-lg shadow-md hover:bg-red-700 transition"
+            onClick={handleClearLines}
+        >
+            Clear
         </button>
       </div>
       
