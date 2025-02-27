@@ -1,25 +1,38 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType } from 'lightweight-charts';
 
 export const ChartComponent = (props) => {
-  const chartContainerRef = useRef(null);
-  const chartRef = useRef(null);
-  
+  // Создаем ссылки для хранения DOM-элементов и объектов графика
+  const chartContainerRef = useRef(null); // Ссылка на контейнер графика
+  const chartRef = useRef(null); // Ссылка на объект графика
+  const candleSeriesRef = useRef(null); // Ссылка на серию данных (свечной график)
+
+  // Ссылки для горизонтальных линий (бенчмарков)
+  const topLineRef = useRef(null); // Верхняя линия (бенчмарк)
+  const bottomLineRef = useRef(null); // Нижняя линия
+  const middleLineRef = useRef(null); // Средняя линия (между верхней и нижней)
+  const subBottomLineRef = useRef(null); // Дополнительная нижняя линия
+
+  // Ссылки для хранения начальных значений линий
+  const initialTopPriceRef = useRef(null); // Начальное значение верхней линии
+  const initialSubBottomPriceRef = useRef(null); // Начальное значение subbottom линии
+
+  // Состояние для отслеживания, нарисован ли уже бенчмарк
+  const [benchmarkDrawn, setBenchmarkDrawn] = useState(false);
+
+  let subDelta = 15;
+
+  // Инициализация графика
   useEffect(() => {
     if (!chartContainerRef.current) return;
     
+    // Создаем график с указанными размерами
     const chart = createChart(chartContainerRef.current, {
-        layout: {
-            background: { type: ColorType.Solid, color: 'black' },
-            textColor: 'white',
-        },
-        grid: {
-            vertLines: { color: 'rgba(255, 255, 255, 0.1)' },
-            horzLines: { color: 'rgba(255, 255, 255, 0.1)' },
-        },
       width: chartContainerRef.current.clientWidth,
       height: 700,
     });
+    
+    // Настройки временной шкалы графика
     chart.applyOptions({
       timeScale: {
         rightOffset: 0,
@@ -37,110 +50,221 @@ export const ChartComponent = (props) => {
       }
     });
     chart.timeScale().fitContent();
+    
     chartRef.current = chart;
     
+    // Добавляем серию свечного графика и устанавливаем данные из props.data
     const candleSeries = chart.addCandlestickSeries();
     candleSeries.setData(props.data);
-
-    const topPrice = 125;
-    const bottomPrice = 80;
-    const ratio = 0.2;
-    const subDelta = 15;
-
-    const topLine = chart.addLineTool(
-      "HorizontalLine",
-      [{ price: topPrice }],
-      {
-        "line": {
-          "color": "#2962FF",
-          "width": 1,
-          "style": 0,
-        },
-      }
-    );
+    candleSeriesRef.current = candleSeries;
     
-    const bottomLine = chart.addLineTool(
-      "HorizontalLine",
-      [{ price: bottomPrice }],
-      {
-        "line": {
-          "color": "#2962FF",
-          "width": 1,
-          "style": 0,
-        },
+    // Обработчик редактирования линий при перетаскивании
+    const updateMiddleLineHandler = (params) => {
+      // Если верхняя линия ещё не установлена, сохраняем её и выходим
+      if (!topLineRef.current) {
+        topLineRef.current = params.selectedLineTool;
+        return;
       }
-    );
-    
-    let middleLine = chart.addLineTool(
-      "HorizontalLine",
-      [{ price: bottomPrice + ratio * (topPrice - bottomPrice) }],
-      {
-        "line": {
-          "color": "#FF0000",
-          "width": 1,
-          "style": 0,
-        },
-      }
-    );
-    
-    let subBottomLine = chart.addLineTool(
-      "HorizontalLine",
-      [{ price: bottomPrice - subDelta }],
-      {
-        "line": {
-          "color": "#00FF00",
-          "width": 1,
-          "style": 0,
-        },
-      }
-    );
-    
-    chart.subscribeLineToolsAfterEdit((params) => {
-      if (params.selectedLineTool.id === topLine.Og.ji) {
-        const newTopPrice = topLine.Og.Ls[0].price;
-        const fixedBottomPrice = bottomLine.Og.Ls[0].price;
+      // Если редактируется верхняя линия
+      if (params.selectedLineTool.id === topLineRef.current.Og.ji) {
+        const newTopPrice = params.selectedLineTool.points[0].price;
+        // Получаем фиксированное значение нижней линии
+        const fixedBottomPrice = bottomLineRef.current.Og.Ls[0].price;
+        const ratio = 0.2; // Коэффициент для расчета средней линии
+        // Вычисляем новую цену средней линии
         const newMiddlePrice = fixedBottomPrice + ratio * (newTopPrice - fixedBottomPrice);
         
-        chart.removeLineToolsById([middleLine.Og.ji]);
-        middleLine = chart.addLineTool(
+        // Обновляем среднюю линию
+        chart.removeLineToolsById([middleLineRef.current ? middleLineRef.current.Og.ji : '']);
+        middleLineRef.current = chart.addLineTool(
           "HorizontalLine",
           [{ price: newMiddlePrice }],
           {
             "line": {
-              "color": "#FF0000",
+              "color": "#00FF00", // Цвет средней линии остаётся без изменений
               "width": 1,
               "style": 0,
             },
           }
         );
-      }
-      else if (params.selectedLineTool.id === bottomLine.Og.ji) {
-        const newBottomPrice = bottomLine.Og.Ls[0].price;
-        const newSubBottomPrice = newBottomPrice - subDelta;
         
-        chart.removeLineToolsById([subBottomLine.Og.ji]);
-        subBottomLine = chart.addLineTool(
+        // Вычисляем дельту изменения верхней линии от исходного значения
+        let delta = newTopPrice - initialTopPriceRef.current;
+        // Смещаем subbottom линию на ту же дельту относительно её исходного значения
+        let newSubBottomPrice = initialSubBottomPriceRef.current + delta;
+        
+        // Гарантируем, что subbottom линия не поднимется выше нижней линии
+        if (newSubBottomPrice > fixedBottomPrice) {
+          newSubBottomPrice = fixedBottomPrice - 0.1;
+        }
+        subDelta = fixedBottomPrice - newSubBottomPrice;
+        // Обновляем subbottom линию
+        chart.removeLineToolsById([subBottomLineRef.current ? subBottomLineRef.current.Og.ji : '']);
+        subBottomLineRef.current = chart.addLineTool(
           "HorizontalLine",
           [{ price: newSubBottomPrice }],
           {
             "line": {
-              "color": "#00FF00",
+              "color": "#FF0000", // Цвет subbottom линии остаётся без изменений
+              "width": 1,
+              "style": 0,
+            },
+          }
+        );
+      } else if (params.selectedLineTool.id === bottomLineRef.current.Og.ji) {
+        // Если редактируется нижняя линия, обновляем subbottom отдельно
+        const newBottomPrice = params.selectedLineTool.points[0].price;
+        const newSubBottomPrice = newBottomPrice - subDelta;
+        chart.removeLineToolsById([subBottomLineRef.current ? subBottomLineRef.current.Og.ji : '']);
+        subBottomLineRef.current = chart.addLineTool(
+          "HorizontalLine",
+          [{ price: newSubBottomPrice }],
+          {
+            "line": {
+              "color": "#FF0000", // Цвет без изменений
               "width": 1,
               "style": 0,
             },
           }
         );
       }
-    });
+    };
+    
+    chart.subscribeLineToolsAfterEdit(updateMiddleLineHandler);
     
     return () => {
+      chart.unsubscribeLineToolsAfterEdit(updateMiddleLineHandler);
       chart.remove();
     };
   }, [props.data]);
   
+  // Функция для рисования линий по клику
+  const handleDrawLine = () => {
+    if (!chartRef.current) return;
+    // Активируем инструмент рисования горизонтальной линии (цвет для инструмента здесь не влияет на итоговые линии)
+    chartRef.current.setActiveLineTool('HorizontalLine', {
+      color: 'red',
+      lineWidth: 2,
+    });
+    
+    const chart = chartRef.current;
+    const candleSeries = candleSeriesRef.current;
+    // Обработчик клика по графику
+    const clickHandler = (params) => {
+      chart.removeAllLineTools();
+      
+      // Получаем цену по вертикальной координате клика
+      const clickPrice = candleSeries.coordinateToPrice(params.point.y);
+      
+      // Параметры для расчета линий
+      const diff = 25;      // Разница для нижней линии
+      const ratio = 0.2;    // Коэффициент для средней линии
+      const subDelta = 10;  // Смещение для subbottom линии
+      
+      // Рассчитываем цены для линий
+      const benchmarkPrice = clickPrice; // Верхняя линия (бенчмарк)
+      const newBottomPrice = benchmarkPrice - diff; // Нижняя линия
+      const newMiddlePrice = newBottomPrice + ratio * (benchmarkPrice - newBottomPrice); // Средняя линия
+      
+      // Вычисляем позицию для subbottom линии как фиксированное смещение от нижней линии
+      let computedSubBottomPrice = newBottomPrice - subDelta;
+      if (computedSubBottomPrice > newBottomPrice) {
+        computedSubBottomPrice = newBottomPrice - 0.1;
+      }
+      
+      // Добавляем верхнюю линию (бенчмарк)
+      topLineRef.current = chart.addLineTool(
+        "HorizontalLine",
+        [{ price: benchmarkPrice }],
+        {
+          "line": {
+            "color": "#2962FF", // Синий цвет
+            "width": 1,
+            "style": 0,
+          },
+        }
+      );
+      
+      // Добавляем нижнюю линию
+      bottomLineRef.current = chart.addLineTool(
+        "HorizontalLine",
+        [{ price: newBottomPrice }],
+        {
+          "line": {
+            "color": "#2962FF", // Синий цвет
+            "width": 1,
+            "style": 0,
+          },
+        }
+      );
+      
+      // Добавляем среднюю линию
+      middleLineRef.current = chart.addLineTool(
+        "HorizontalLine",
+        [{ price: newMiddlePrice }],
+        {
+          "line": {
+            "color": "#00FF00", // Зеленый цвет
+            "width": 1,
+            "style": 0,
+          },
+        }
+      );
+      
+      // Добавляем subbottom линию
+      subBottomLineRef.current = chart.addLineTool(
+        "HorizontalLine",
+        [{ price: computedSubBottomPrice }],
+        {
+          "line": {
+            "color": "#FF0000", // Красный цвет
+            "width": 1,
+            "style": 0,
+          },
+        }
+      );
+      
+      // Сохраняем начальные значения для дальнейшего смещения при перетаскивании верхней линии
+      initialTopPriceRef.current = benchmarkPrice;
+      initialSubBottomPriceRef.current = computedSubBottomPrice;
+      
+      chart.unsubscribeClick(clickHandler);
+      setBenchmarkDrawn(true);
+    };
+    
+    chartRef.current.subscribeClick(clickHandler);
+  };
+
+  // Функция для удаления всех линий с графика
+  const handleClearLines = () => {
+    if (!chartRef.current) return;
+    chartRef.current.removeAllLineTools();
+  };
+
   return (
-    <div className="w-full" style={{ width: '100%', height: 700 }}>
-      <div ref={chartContainerRef} style={{ width: '100%', height: '100%' }} />
+    <div className="w-full bg-gray-800 rounded-lg shadow-lg relative">
+      <div className="mx-4 bg-gray-800 rounded-lg shadow-lg relative">
+        <h1 className="text-2xl font-bold text-white mb-2">PoC Trading Chart</h1>
+        <p className="text-gray-300 mb-6">
+          Click the button then click on the chart to draw benchmark lines.
+        </p>
+        <button 
+          className="mb-4 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg shadow-md hover:bg-blue-700 transition"
+          onClick={handleDrawLine}
+        >
+          Long
+        </button>
+        <button 
+          className="mx-2 px-4 py-2 bg-red-600 text-white font-medium rounded-lg shadow-md hover:bg-red-700 transition"
+          onClick={handleClearLines}
+        >
+          Clear
+        </button>
+      </div>
+      
+      <div className="mx-4">
+        <div ref={chartContainerRef} style={{ width: '100%', height: '100%' }} />
+      </div>
     </div>
   );
 };

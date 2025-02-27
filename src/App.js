@@ -1,4 +1,4 @@
-import { ChartComponent } from './ChartComponent';
+import { ChartComponent } from './components/ChartComponent';
 import { generateCandlestickData } from './utils/dataGenerator';
 import { generateMinutelyCandlestickData } from './utils/dataCandles';
 import initialData from './initialData.json';
