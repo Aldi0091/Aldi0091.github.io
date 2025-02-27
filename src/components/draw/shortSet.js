@@ -30,18 +30,16 @@ export function handleDrawShort({
       // Параметры для расчета линий
       const diff = 19;      // Разница для нижней линии
       const ratio = 0.2;    // Коэффициент для средней линии
-      const subDelta = 5;  // Смещение для subbottom линии
+      const subDelta = 10;  // Смещение для subbottom линии
   
       // Рассчитываем цены для линий
       const benchmarkPrice = clickPrice; // Верхняя линия (бенчмарк)
-      const newTopPrice = benchmarkPrice + diff; // Нижняя линия
-      const newMiddlePrice = newTopPrice - ratio * (benchmarkPrice - newTopPrice); // Средняя линия
+      const newMiddlePrice = benchmarkPrice + diff; // Нижняя линия
+      const newBottomPrice = newMiddlePrice - ratio * (newMiddlePrice - benchmarkPrice); // Средняя линия
   
       // Вычисляем позицию для subbottom линии как фиксированное смещение от нижней линии
-      let computedSubBottomPrice = newTopPrice + subDelta;
-      if (computedSubBottomPrice > newTopPrice) {
-        computedSubBottomPrice = newTopPrice;
-      }
+      let computedSubBottomPrice = newMiddlePrice + subDelta;
+
   
       topLineRef.current = chart.addLineTool(
         "HorizontalLine",
@@ -56,7 +54,7 @@ export function handleDrawShort({
       );
       middleLineRef.current = chart.addLineTool(
         "HorizontalLine",
-        [{ price: newTopPrice }],
+        [{ price: newMiddlePrice }],
         {
           "line": {
             "color": "#2962FF",
@@ -67,7 +65,7 @@ export function handleDrawShort({
       );
       bottomLineRef.current = chart.addLineTool(
         "HorizontalLine",
-        [{ price: newMiddlePrice }],
+        [{ price: newBottomPrice }],
         {
           "line": {
             "color": "#00FF00",

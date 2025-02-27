@@ -1,5 +1,5 @@
 // chartCreation.js
-import { createChart } from 'lightweight-charts';
+import { createChart, ColorType } from 'lightweight-charts';
 
 /**
  * Функция для создания графика с заданными настройками.
@@ -10,6 +10,14 @@ import { createChart } from 'lightweight-charts';
 export function createConfiguredChart(container) {
   // Создаем график с указанными размерами
   const chart = createChart(container, {
+    layout: {
+      background: { type: ColorType.Solid, color: 'black' },
+      textColor: 'white',
+    },
+    grid: {
+      vertLines: { color: 'rgba(255,255,255,0.1)' },
+      horzLines: { color: 'rgba(255,255,255,0.1)' },
+    },
     width: container.clientWidth,
     height: 700,
   });
@@ -18,7 +26,7 @@ export function createConfiguredChart(container) {
   chart.applyOptions({
     timeScale: {
       rightOffset: 0,
-      barSpacing: 10,
+      barSpacing: 5,
       fixLeftEdge: true,
       fixRightEdge: true,
       timeVisible: true,
