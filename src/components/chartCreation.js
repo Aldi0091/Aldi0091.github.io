@@ -8,7 +8,6 @@ import { createChart, ColorType } from 'lightweight-charts';
  * @returns {Chart} - Созданный объект графика.
  */
 export function createConfiguredChart(container) {
-  // Создаем график с указанными размерами
   const chart = createChart(container, {
     layout: {
       background: { type: ColorType.Solid, color: 'black' },
@@ -22,13 +21,12 @@ export function createConfiguredChart(container) {
     height: 700,
   });
 
-  // Применяем настройки временной шкалы
   chart.applyOptions({
     timeScale: {
       rightOffset: 0,
       barSpacing: 5,
-      fixLeftEdge: true,
-      fixRightEdge: true,
+      fixLeftEdge: false,
+      fixRightEdge: false,
       timeVisible: true,
       secondsVisible: false,
       tickMarkFormatter: (timestamp) => {

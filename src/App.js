@@ -1,14 +1,15 @@
 import { ChartComponent } from './components/ChartComponent';
-import { generateCandlestickData } from './utils/dataGenerator';
-import { generateMinutelyCandlestickData } from './utils/dataCandles';
 import initialData from './initialData.json';
+import { Notifications } from '@mantine/notifications';
+import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 
-// const initialData = generateMinutelyCandlestickData();;
 
 export default function App(props) {
   return (
     <div className="width-auto min-h-screen flex items-center justify-center bg-gray-800">
       <ChartComponent data={initialData} />
+      <Notifications position="top-right" />
     </div>
   );
 }
